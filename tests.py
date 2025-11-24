@@ -1,4 +1,4 @@
-from moesi import Estado, LinhaCache, RAM
+from moesi import Estado, LinhaCache, RAM, Barramento
 
 linha = LinhaCache()
 print(f"Estado Inicial: {linha}") 
@@ -28,3 +28,5 @@ print(f"Leitura pós-escrita no Endereço {endereco_teste}: {valor_pos_escrita}"
 # Visualizando a RAM novamente para ver o 777 lá
 print("\nEstado Final da RAM:")
 print(ram_sistema)
+
+
