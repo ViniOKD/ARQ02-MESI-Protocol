@@ -2,7 +2,7 @@ from enum import Enum
 import random
 
 
-#TODO: especificar o tipo do endereço nas funções (int, str...)
+#TODO: VERIFICAR A UTILIZAÇAO DA FIFO IMPROVISADA NA CACHE
 
 # definição dos estados da MOESI
 class Estado(Enum):
@@ -29,8 +29,8 @@ class LinhaCache:
         Exemplo: [LINHA] Tag: 10 , Dado: 500 , Estado: EXCLUSIVE
         """
         dado_str = str(self.dado) if self.dado is not None else "Vazio"
-        tag_str = str(self.dado) if self.tag is not None else "-"
-        return f"[LINHA] Tag: {tag_str} , Dado: {dado_str} , Estado: {self.estado.value}]"
+        tag_str = str(self.tag) if self.tag is not None else "-"
+        return f"[LINHA] Tag: {tag_str} | Dado: {dado_str} | Estado: {self.estado.value}]"
     
 
 
@@ -186,12 +186,172 @@ class Barramento():
         return dado_encontrado
 
 
+class Cache():
+    def __init__ (self, id_cache, barramento, tamanho =5):
+        """
+        Simula uma cache simples
+        """
 
+        self.id = id_cache
+        self.barramento = barramento
+        self.tamanho = tamanho
+        # será usado uma lista como fila. O final é o mais recente, o início é o mais antigo
+        self.linhas = []
+
+    def buscar_linha(self, endereco):
+        """
+        Busca uma linha de cache pelo endereço *tag*.
+        Retorna a linha se encontrada, ou None se não existir.
+        """
+
+        for linha in self.linhas:
+            if linha.tag == endereco:
+                return linha
+        return None
+    
+    # método protegido
+    def _logica_fifo(self):
+        """
+        Responsável por manter a política FIFO, isto é,
+        remover o mais antigo (índice 0). Se for sujo (M ou O), escreve de volta na RAM, write-back.
+        """
+
+        if len(self.linhas) >= self.tamanho:
+            linha_removida = self.linhas.pop(0) # remove a linha mais antiga
+    
+            if linha_removida.estado in [Estado.MODIFIED, Estado.OWNED]:
+                # Write-back na RAM
+                print(f'[Cache {self.id}]: Write-back do endereço {linha_removida.tag} para RAM.')
+                self.barramento.ram.escrever(linha_removida.tag, linha_removida.dado)
+    
+    def ler(self, endereco):
+        """
+        Realiza uma leitura na cache(load).
+        """
+        linha = self.buscar_linha(endereco)
+
+        # Read hit
+        if linha and linha.estado != Estado.INVALID:
+            print(f'[Cache {self.id}]: READ HIT no endereço {endereco}. Dado: {linha.dado}. Estado: {linha.estado.value}')
+            self.linhas.remove(linha)
+            self.linhas.append(linha) # atualiza a linha como a mais recente (FIFO)
+            return linha.dado
+        
+        # Read miss
+        print(f'[Cache {self.id}]: READ MISS no endereço {endereco}.')
+        self._logica_fifo() # aplica a política FIFO
+
+        dado, novo_estado = self.barramento.solicitar_leitura(endereco, self.id)
+
+        nova_linha = LinhaCache()
+        nova_linha.tag = endereco
+        nova_linha.dado = dado
+        nova_linha.estado = novo_estado
+        self.linhas.append(nova_linha)
+        return dado
+    
+    def escrever(self, endereco, valor):
+        """
+        Realiza uma escrita na cache(store).
+        """
+        linha = self.buscar_linha(endereco)
+
+        # Write hit
+        if linha and linha.estado != Estado.INVALID:
+            print(f'[Cache {self.id}]: WRITE HIT no endereço {endereco}.')
+
+            if linha.estado == Estado.EXCLUSIVE:
+                linha.estado = Estado.MODIFIED
+            
+            elif linha.estado == Estado.MODIFIED:
+                # Já está em MODIFIED, nada a fazer
+                pass
+
+            elif linha.estado in [Estado.SHARED, Estado.OWNED]:
+                # Necessário chamar o barramento para invalidar outras caches
+                self.barramento.solicitar_escrita(endereco, self.id)
+                linha.estado = Estado.MODIFIED
+            
+            linha.dado = valor
+            self.linhas.remove(linha)
+            self.linhas.append(linha) # atualiza a linha como a mais recente (FIFO)
+            return
+        
+        # Write miss
+        print(f'[Cache {self.id}]: WRITE MISS no endereço {endereco}.')
+        self._logica_fifo()
+
+        # Solicita a propriedade da escrita
+        # Garantir que outras caches invalidem suas cópias
+        # _ Indica que o valor da função não será usado
+        _ = self.barramento.solicitar_escrita(endereco, self.id)
+
+        nova_linha = LinhaCache()
+        nova_linha.tag = endereco
+        nova_linha.dado = valor
+        nova_linha.estado = Estado.MODIFIED
+        self.linhas.append(nova_linha)
+
+    def __repr__ (self):
+        """
+        Representação em string da cache
+        """
+        res = f"[Cache {self.id}, tamanho {self.tamanho}]\n"
+
+        if not self.linhas:
+            res += "  (vazia)\n"
+        else:
+            for linha in self.linhas:
+                res += f" Estado: {linha.estado.value} | Tag: {linha.tag} | Dado: {linha.dado}\n"
+        return res
+
+
+# --- TESTE FINAL CORRIGIDO ---
+if __name__ == "__main__":
+    print("\n=== SIMULAÇÃO MOESI - CORREÇÃO FINAL ===\n")
+
+    ram = RAM(50)
+    ram.escrever(10, 100) 
+    print(f"Valor inicial RAM[10]: 100")
+
+    bus = Barramento(ram)
+    p1 = Cache(1, bus)
+    p2 = Cache(2, bus)
+    p3 = Cache(3, bus)
+
+    bus.colocar_cache(p1)
+    bus.colocar_cache(p2)
+    bus.colocar_cache(p3)
+
+    # 1. P1 lê 10 (Miss -> E)
+    p1.ler(10)
+    
+    # 2. P1 escreve 500 (Hit -> M)
+    p1.escrever(10, 500)
+
+    # 3. P2 lê 10 (Miss -> P1 fornece -> P1=O, P2=S)
+    p2.ler(10)
+    
+    print("\n--- Estado Intermediário (P1=O, P2=S) ---")
+    print(p1) 
+    print(p2)
+
+    # 4. P3 escreve 999 (Miss -> Invalida P1 e P2 -> P3=M)
+    p3.escrever(10, 999)
+    
+    print("\n--- Estado Final ---")
+    print(p1) # Esperado: Inválido (não deve aparecer ou estado I)
+    print(p2) # Esperado: Inválido
+    print(p3) # Esperado: MODIFIED, valor 999
+    
+    # 5. Verificação da RAM
+    # A RAM deve ter 100. O valor 999 está sujo em P3. O valor 500 foi perdido (sobrescrito) ou descartado.
+    print(f"\nValor na RAM[10]: {ram.ler(10)} (Esperado: 100 - desatualizado)")
 
 
     
 
 
-
+  
 
 
