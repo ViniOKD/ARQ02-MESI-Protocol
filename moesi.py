@@ -1,6 +1,7 @@
 from __future__ import annotations # resolve o forward reference type hinting - causado por Barramento referenciar Cache antes dela ser declarada
 from enum import Enum
 import random
+from collections import deque
 
 
 TAMANHO_RAM = 50
@@ -197,7 +198,8 @@ class Cache():
         self.barramento : Barramento = barramento
         self.tamanho : int = tamanho
         # será usado uma lista como fila. O final é o mais recente, o início é o mais antigo
-        self.linhas : list[LinhaCache] = []
+        #self.linhas : list[LinhaCache] = []
+        self.linhas : deque[LinhaCache] = deque() # nao limitar o tamanho com maxlen para controlar manualmente a remoção com write-back
 
     def buscar_linha(self, endereco : int) -> LinhaCache | None:
         """
@@ -218,8 +220,8 @@ class Cache():
         remover o mais antigo (índice 0). Se for sujo (M ou O), escreve de volta na RAM, write-back.
         """
 
-        if len(self.linhas) >= self.tamanho:
-            linha_removida = self.linhas.pop(0) # remove a linha mais antiga
+        if len(self.linhas) >= self.tamanho:    
+            linha_removida = self.linhas.popleft() # remove a linha mais antiga
     
             if linha_removida.estado in [Estado.MODIFIED, Estado.OWNED]:
                 # Write-back na RAM
