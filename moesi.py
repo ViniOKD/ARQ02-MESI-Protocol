@@ -1,9 +1,13 @@
+from __future__ import annotations # resolve o forward reference type hinting - causado por Barramento referenciar Cache antes dela ser declarada
 from enum import Enum
 import random
 
 
+TAMANHO_RAM = 50
+TAMANHO_CACHE = 5
 #TODO: VERIFICAR A UTILIZAÇAO DA FIFO IMPROVISADA NA CACHE
 # POSSIVELMENTE ADICIONAR COLLECTIONS
+
 
 # definição dos estados da MOESI
 class Estado(Enum):
@@ -20,9 +24,10 @@ class LinhaCache:
         """
         Inicializa uma linha de cache vazia, com estado inicial padrão inválido (*INVALID*)
         """
-        self.tag = None # endereço do bloco na RAM
-        self.dado = None # dado armazenado na linha de cache
-        self.estado = Estado.INVALID # estado inicial é sempre inválido
+        self.tag : int | None = None # endereço do bloco na RAM
+        self.dado : int | None = None # dado armazenado na linha de cache
+        self.estado : Estado = Estado.INVALID # estado inicial é sempre inválido
+
 
     def __repr__ (self):
         """
@@ -33,21 +38,19 @@ class LinhaCache:
         tag_str = str(self.tag) if self.tag is not None else "-"
         return f"[LINHA] Tag: {tag_str} | Dado: {dado_str} | Estado: {self.estado.value}"
     
-
-
 # classe da memória principal (RAM)
 class RAM: 
-    def __init__(self, tamanho = 50):
+    def __init__(self, tamanho = TAMANHO_RAM):
         """
         Inicializa a memória RAM com o tamanho especificado.
         Preenche os endereços de memória com valores aleatórios, entre 1 e 9999.
         """
-        self.tamanho = tamanho
+        self.tamanho : int = tamanho
         # Preenchendo a memória com valores aleatórios, uma lista de inteiros
-        self.memoria = [random.randint(1, 9999) for _ in range(tamanho)]
+        self.memoria  : list[int] = [random.randint(1, 9999) for _ in range(tamanho)]
     
 
-    def ler(self, endereco):
+    def ler(self, endereco : int) -> int | None:
         """
         Retorna o valor armazenado no endereço especificado da memória RAM.
         Retorna None se o endereço for inválido.
@@ -59,7 +62,7 @@ class RAM:
             print(f"Endereço {endereco} inválido na RAM.")
             return None
         
-    def escrever(self, endereco, valor):
+    def escrever(self, endereco : int, valor : int ) -> None:
         """
         Escreve um valor no endereço especificado da memória RAM.
         Basicamente, funciona como uma atualização.
@@ -81,25 +84,22 @@ class RAM:
         return repr_str
 
 
-
-
-
 # classe do barramento de dados
 class Barramento():
     def __init__ (self, ram: RAM):
         """ Inicializa o barramento de dados """
-        self.ram = ram # conecta o barramento à MP
-        self.caches: list = [] # lista de caches conectadas ao barramento
+        self.ram : RAM = ram # conecta o barramento à Memoria Principal
+        self.caches : list[Cache] = [] # lista de caches conectadas ao barramento
     
-    def colocar_cache(self, cache):
+    def colocar_cache(self, cache : Cache):
         """ Conecta uma cache ao barramento """
         self.caches.append(cache)
 
-    def log(self, msg):
+    def log(self, msg: str) -> None:
         """ Função de log para o barramento """
         print(f"[Barramento] {msg}")
 
-    def solicitar_leitura(self, endereco, id_requisitante):
+    def solicitar_leitura(self, endereco : int, id_requisitante : int) -> tuple[int | None, Estado]:
         """
         Acontece quando uma ocorre uma READ MISS na cache, isto é, a cache requisitante não possui o dado.
         O barramento verifica se as outras caches possuem o dado
@@ -151,7 +151,7 @@ class Barramento():
             self.log(f'Nenhuma outra cache possui o dado. Lido da RAM: {dado}')
             return dado, Estado.EXCLUSIVE
         
-    def solicitar_escrita(self, endereco, id_requisitante):
+    def solicitar_escrita(self, endereco : int, id_requisitante : int) -> int | None:
         """
         Acontece quando ocorre uma WRITE MISS ou WRITE HIT em linha *SHARED* na cache requisitante.
         Dessa forma, garante que todas as outras caches invalidem suas cópias do dado.
@@ -188,18 +188,18 @@ class Barramento():
 
 # classe da cache
 class Cache():
-    def __init__ (self, id_cache, barramento, tamanho =5):
+    def __init__ (self, id_cache : int, barramento : Barramento, tamanho : int = TAMANHO_CACHE):
         """
         Simula uma cache simples
         """
 
-        self.id = id_cache
-        self.barramento = barramento
-        self.tamanho = tamanho
+        self.id : int = id_cache
+        self.barramento : Barramento = barramento
+        self.tamanho : int = tamanho
         # será usado uma lista como fila. O final é o mais recente, o início é o mais antigo
-        self.linhas = []
+        self.linhas : list[LinhaCache] = []
 
-    def buscar_linha(self, endereco):
+    def buscar_linha(self, endereco : int) -> LinhaCache | None:
         """
         Busca uma linha de cache pelo endereço *tag*.
         Retorna a linha se encontrada, ou None se não existir.
@@ -210,7 +210,8 @@ class Cache():
                 return linha
         return None
     
-    # método protegido
+    # método protegido X
+    # indica que é um método interno da classe -> metodo ""protegido"" seria com __
     def _logica_fifo(self):
         """
         Responsável por manter a política FIFO, isto é,
@@ -222,10 +223,20 @@ class Cache():
     
             if linha_removida.estado in [Estado.MODIFIED, Estado.OWNED]:
                 # Write-back na RAM
-                print(f'[Cache {self.id}]: Write-back do endereço {linha_removida.tag} para RAM.')
-                self.barramento.ram.escrever(linha_removida.tag, linha_removida.dado)
+                #print(f'[Cache {self.id}]: Write-back do endereço {linha_removida.tag} para RAM.')
+                #self.barramento.ram.escrever(linha_removida.tag, linha_removida.dado)
+                self.write_back(linha_removida.tag, linha_removida.dado)
     
-    def ler(self, endereco):
+    # Pra ficar mais legivel que self.barramento.ram.escrever...
+    def write_back(self, tag : int , dado : int ) -> None:
+        """
+        Realiza o write-back de uma linha suja (M ou O) para a RAM.
+        """
+        print(f'[Cache {self.id}]: Write-back do endereço {tag} para RAM.')
+        self.barramento.ram.escrever(tag, dado)
+
+
+    def ler(self, endereco : int) -> int | None:
         """
         Realiza uma leitura na cache(load).
         """
@@ -240,7 +251,7 @@ class Cache():
         print(f'[Cache {self.id}]: READ MISS no endereço {endereco}.')
         self._logica_fifo() # aplica a política FIFO
 
-        dado, novo_estado = self.barramento.solicitar_leitura(endereco, self.id)
+        dado, novo_estado = self.barramento.solicitar_leitura(endereco, self.id) # trocar esse self.barramento.solicitar_leitura por uma funcao pra melhorar leitura
 
         nova_linha = LinhaCache()
         nova_linha.tag = endereco
@@ -249,7 +260,7 @@ class Cache():
         self.linhas.append(nova_linha)
         return dado
     
-    def escrever(self, endereco, valor):
+    def escrever(self, endereco : int, valor : int) -> None:
         """
         Realiza uma escrita na cache(store).
         """
@@ -259,12 +270,12 @@ class Cache():
         if linha and linha.estado != Estado.INVALID:
             print(f'[Cache {self.id}]: WRITE HIT no endereço {endereco}.')
 
-            if linha.estado == Estado.EXCLUSIVE:
-                linha.estado = Estado.MODIFIED
-            
-            elif linha.estado == Estado.MODIFIED:
+            if linha.estado == Estado.MODIFIED:
                 # Já está em MODIFIED, nada a fazer
                 pass
+
+            elif linha.estado == Estado.EXCLUSIVE:
+                linha.estado = Estado.MODIFIED
 
             elif linha.estado in [Estado.SHARED, Estado.OWNED]:
                 # Necessário chamar o barramento para invalidar outras caches
@@ -281,7 +292,7 @@ class Cache():
         # Solicita a propriedade da escrita
         # Garantir que outras caches invalidem suas cópias
         # _ Indica que o valor da função não será usado
-        _ = self.barramento.solicitar_escrita(endereco, self.id)
+        _ = self.barramento.solicitar_escrita(endereco, self.id) # Em cima acontece a mesma coisa só q nao tem o _ 🤔
 
         nova_linha = LinhaCache()
         nova_linha.tag = endereco
@@ -304,13 +315,12 @@ class Cache():
 
 
 # TESTE
-if __name__ == "__main__":
+def main() -> None:
     print("\nSIMULAÇÃO MOESI\n")
 
-    ram = RAM(50)
+    ram = RAM(TAMANHO_RAM)
     ram.escrever(10, 100) 
-    print(f"Valor inicial RAM[10]: 100")
-
+    print(f"Valor inicial RAM[10]: {ram.ler(10)}") # esperado : 100
     bus = Barramento(ram)
     p1 = Cache(1, bus)
     p2 = Cache(2, bus)
@@ -344,6 +354,11 @@ if __name__ == "__main__":
     # 5. Verificação da RAM
     # A RAM deve ter 100. O valor 999 está sujo em P3. O valor 500 foi perdido (sobrescrito) ou descartado.
     print(f"\nValor na RAM[10]: {ram.ler(10)} (Esperado: 100 - desatualizado)")
+    print(p3)
+
+
+if __name__ == "__main__":
+    main()
 
 
     

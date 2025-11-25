@@ -5,6 +5,7 @@ print(f"Estado Inicial: {linha}")
 linha.tag = 10
 linha.dado = 500
 linha.estado = Estado.EXCLUSIVE
+
 print(f"Após carga: {linha}")
 
 print("teste RAM")
