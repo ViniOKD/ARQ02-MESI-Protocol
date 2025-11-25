@@ -316,6 +316,73 @@ class Cache():
         return res
 
 
+# --- CLASSE PROCESSADOR (COM LÓGICA DE LEILÃO INTEGRADA) ---
+class Processador:
+    def __init__(self, id_processador: int, cache: Cache):
+        """
+        Inicializa um processador com seu ID e cache associada.
+        """
+        self.id: int = id_processador
+        self.cache: Cache = cache
+        self.historico: list[str] = []
+    
+    def log(self, msg: str) -> None:
+        """Registra uma mensagem no histórico do processador"""
+        mensagem = f"[Processador {self.id}] {msg}"
+        print(mensagem)
+        self.historico.append(mensagem)
+    
+    def load(self, endereco: int) -> int | None:
+        """
+        Realiza uma operação de leitura (load) de um endereço.
+        """
+        self.log(f"Executando LOAD do endereço {endereco}")
+        dado = self.cache.ler(endereco)
+        
+        if dado is not None:
+            self.log(f"LOAD concluído. Valor: {dado}")
+        else:
+            self.log(f"LOAD falhou para endereço {endereco}")
+        
+        return dado
+    
+    def store(self, endereco: int, valor: int) -> None:
+        """
+        Realiza uma operação de escrita (store) em um endereço.
+        """
+        self.log(f"Executando STORE no endereço {endereco} com valor {valor}")
+        self.cache.escrever(endereco, valor)
+        self.log(f"STORE concluído")
+        
+    
+    def mostrar_cache(self) -> None:
+        """Exibe o estado atual da cache do processador"""
+        print(f"\n{'='*50}")
+        print(f"Estado da Cache do Processador {self.id}")
+        print(f"{'='*50}")
+        print(self.cache)
+    
+    def mostrar_historico(self) -> None:
+        """Exibe o histórico de operações do processador"""
+        print(f"\n{'='*50}")
+        print(f"Histórico do Processador {self.id}")
+        print(f"{'='*50}")
+        if not self.historico:
+            print("  (nenhuma operação realizada)")
+        else:
+            for operacao in self.historico:
+                print(f"  {operacao}")
+    
+    def limpar_historico(self) -> None:
+        """Limpa o histórico de operações"""
+        self.historico.clear()
+        self.log("Histórico limpo")
+    
+    def __repr__(self) -> str:
+        """Representação em string do processador"""
+        return f"[Processador {self.id}] Cache: {len(self.cache.linhas)}/{self.cache.tamanho} linhas ocupadas"
+
+
 # TESTE
 def main() -> None:
     print("\nSIMULAÇÃO MOESI\n")
