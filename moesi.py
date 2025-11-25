@@ -306,9 +306,9 @@ class Cache():
         return res
 
 
-# --- TESTE FINAL CORRIGIDO ---
+# TESTE
 if __name__ == "__main__":
-    print("\n=== SIMULAÇÃO MOESI - CORREÇÃO FINAL ===\n")
+    print("\nSIMULAÇÃO MOESI\n")
 
     ram = RAM(50)
     ram.escrever(10, 100) 
