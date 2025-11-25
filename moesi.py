@@ -3,6 +3,7 @@ import random
 
 
 #TODO: VERIFICAR A UTILIZAÇAO DA FIFO IMPROVISADA NA CACHE
+# POSSIVELMENTE ADICIONAR COLLECTIONS
 
 # definição dos estados da MOESI
 class Estado(Enum):
@@ -30,7 +31,7 @@ class LinhaCache:
         """
         dado_str = str(self.dado) if self.dado is not None else "Vazio"
         tag_str = str(self.tag) if self.tag is not None else "-"
-        return f"[LINHA] Tag: {tag_str} | Dado: {dado_str} | Estado: {self.estado.value}]"
+        return f"[LINHA] Tag: {tag_str} | Dado: {dado_str} | Estado: {self.estado.value}"
     
 
 
@@ -185,7 +186,7 @@ class Barramento():
 
         return dado_encontrado
 
-
+# classe da cache
 class Cache():
     def __init__ (self, id_cache, barramento, tamanho =5):
         """
@@ -233,8 +234,6 @@ class Cache():
         # Read hit
         if linha and linha.estado != Estado.INVALID:
             print(f'[Cache {self.id}]: READ HIT no endereço {endereco}. Dado: {linha.dado}. Estado: {linha.estado.value}')
-            self.linhas.remove(linha)
-            self.linhas.append(linha) # atualiza a linha como a mais recente (FIFO)
             return linha.dado
         
         # Read miss
@@ -273,8 +272,6 @@ class Cache():
                 linha.estado = Estado.MODIFIED
             
             linha.dado = valor
-            self.linhas.remove(linha)
-            self.linhas.append(linha) # atualiza a linha como a mais recente (FIFO)
             return
         
         # Write miss
