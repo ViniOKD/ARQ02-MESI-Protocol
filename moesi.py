@@ -1,14 +1,12 @@
-from __future__ import annotations # resolve o forward reference type hinting - causado por Barramento referenciar Cache antes dela ser declarada
+from __future__ import annotations # Resolve o forward reference type hinting - causado por Barramento referenciar Cache antes dela ser declarada
 from enum import Enum
 import random
 from collections import deque
+from abc import ABC, abstractmethod
 
 
 TAMANHO_RAM = 50
 TAMANHO_CACHE = 5
-#TODO: VERIFICAR A UTILIZAÇAO DA FIFO IMPROVISADA NA CACHE
-# POSSIVELMENTE ADICIONAR COLLECTIONS
-
 
 # definição dos estados da MOESI
 class Estado(Enum):
@@ -212,8 +210,6 @@ class Cache():
                 return linha
         return None
     
-    # método protegido X
-    # indica que é um método interno da classe -> metodo ""protegido"" seria com __
     def _logica_fifo(self):
         """
         Responsável por manter a política FIFO, isto é,
@@ -225,11 +221,8 @@ class Cache():
     
             if linha_removida.estado in [Estado.MODIFIED, Estado.OWNED]:
                 # Write-back na RAM
-                #print(f'[Cache {self.id}]: Write-back do endereço {linha_removida.tag} para RAM.')
-                #self.barramento.ram.escrever(linha_removida.tag, linha_removida.dado)
                 self.write_back(linha_removida.tag, linha_removida.dado)
     
-    # Pra ficar mais legivel que self.barramento.ram.escrever...
     def write_back(self, tag : int , dado : int ) -> None:
         """
         Realiza o write-back de uma linha suja (M ou O) para a RAM.
@@ -253,7 +246,7 @@ class Cache():
         print(f'[Cache {self.id}]: READ MISS no endereço {endereco}.')
         self._logica_fifo() # aplica a política FIFO
 
-        dado, novo_estado = self.barramento.solicitar_leitura(endereco, self.id) # trocar esse self.barramento.solicitar_leitura por uma funcao pra melhorar leitura
+        dado, novo_estado = self.barramento.solicitar_leitura(endereco, self.id)
 
         nova_linha = LinhaCache()
         nova_linha.tag = endereco
@@ -293,8 +286,7 @@ class Cache():
 
         # Solicita a propriedade da escrita
         # Garantir que outras caches invalidem suas cópias
-        # _ Indica que o valor da função não será usado
-        _ = self.barramento.solicitar_escrita(endereco, self.id) # Em cima acontece a mesma coisa só q nao tem o _ 🤔
+        self.barramento.solicitar_escrita(endereco, self.id)
 
         nova_linha = LinhaCache()
         nova_linha.tag = endereco
@@ -315,28 +307,28 @@ class Cache():
                 res += f" Estado: {linha.estado.value} | Tag: {linha.tag} | Dado: {linha.dado}\n"
         return res
 
-
-# --- CLASSE PROCESSADOR (COM LÓGICA DE LEILÃO INTEGRADA) ---
-class Processador:
+# classe abstrata do processador
+class Processador(ABC):
     def __init__(self, id_processador: int, cache: Cache):
         """
         Inicializa um processador com seu ID e cache associada.
         """
         self.id: int = id_processador
         self.cache: Cache = cache
-        self.historico: list[str] = []
+        self.historico: list[str] = [] #TODO: Resolver como armazenar o log de operações
     
+    @abstractmethod
     def log(self, msg: str) -> None:
         """Registra uma mensagem no histórico do processador"""
         mensagem = f"[Processador {self.id}] {msg}"
         print(mensagem)
         self.historico.append(mensagem)
-    
-    def load(self, endereco: int) -> int | None:
+
+    def ler(self, endereco: int) -> int | None:
         """
         Realiza uma operação de leitura (load) de um endereço.
         """
-        self.log(f"Executando LOAD do endereço {endereco}")
+        self.log(f"Executando escrita do endereço {endereco}")
         dado = self.cache.ler(endereco)
         
         if dado is not None:
@@ -346,7 +338,8 @@ class Processador:
         
         return dado
     
-    def store(self, endereco: int, valor: int) -> None:
+
+    def escrever(self, endereco: int, valor: int) -> None:
         """
         Realiza uma operação de escrita (store) em um endereço.
         """
@@ -368,7 +361,7 @@ class Processador:
         print(f"Histórico do Processador {self.id}")
         print(f"{'='*50}")
         if not self.historico:
-            print("  (nenhuma operação realizada)")
+            print("(nenhuma operação realizada)")
         else:
             for operacao in self.historico:
                 print(f"  {operacao}")
