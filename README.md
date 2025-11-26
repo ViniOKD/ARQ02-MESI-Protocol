@@ -77,7 +77,7 @@ A lógica interna controla transições entre estados conforme o MOESI define.
 
 ### 3. Controlador de Coerência (MOESI)
 
-Este módulo implementa toda a lógica do protocolo, incluindo:
+Implementa toda a lógica do protocolo, incluindo:
 
 - transições de estado entre processadores;
 - propagação de dados modificados;
@@ -90,7 +90,7 @@ Toda a inteligência do protocolo fica concentrada aqui, deixando o simulador ex
 
 ### 4. Módulo de Leilão
 
-Este é o componente que conecta o simulador ao problema real.  
+Conecta o simulador ao problema real.  
 Ele é responsável por:
 
 - criar itens para leilão (linhas da cache);
@@ -116,9 +116,9 @@ Esse ciclo se repete até que o item seja arrematado ou o leilão seja finalizad
 
 ---
 
-### 🧪 6. Testes e Cenários
+### 6. Testes e Cenários
 
-O projeto inclui (ou incluirá):
+O projeto inclui:
 
 - cenários de corrida de lances (concorrência);
 - vários compradores disputando o mesmo item;
