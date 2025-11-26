@@ -1,4 +1,5 @@
 from __future__ import annotations # resolve o forward reference type hinting - causado por Barramento referenciar Cache antes dela ser declarada
+from abc import ABC, abstractmethod
 from enum import Enum
 import random
 from collections import deque
@@ -294,7 +295,7 @@ class Cache():
         # Solicita a propriedade da escrita
         # Garantir que outras caches invalidem suas cópias
         # _ Indica que o valor da função não será usado
-        _ = self.barramento.solicitar_escrita(endereco, self.id) # Em cima acontece a mesma coisa só q nao tem o _ 🤔
+        self.barramento.solicitar_escrita(endereco, self.id)
 
         nova_linha = LinhaCache()
         nova_linha.tag = endereco
@@ -317,7 +318,7 @@ class Cache():
 
 
 # --- CLASSE PROCESSADOR (COM LÓGICA DE LEILÃO INTEGRADA) ---
-class Processador:
+class Processador(ABC):
     def __init__(self, id_processador: int, cache: Cache):
         """
         Inicializa um processador com seu ID e cache associada.
@@ -325,13 +326,15 @@ class Processador:
         self.id: int = id_processador
         self.cache: Cache = cache
         self.historico: list[str] = []
-    
+
+
     def log(self, msg: str) -> None:
         """Registra uma mensagem no histórico do processador"""
         mensagem = f"[Processador {self.id}] {msg}"
         print(mensagem)
         self.historico.append(mensagem)
     
+
     def load(self, endereco: int) -> int | None:
         """
         Realiza uma operação de leitura (load) de um endereço.
@@ -354,14 +357,14 @@ class Processador:
         self.cache.escrever(endereco, valor)
         self.log(f"STORE concluído")
         
-    
+
     def mostrar_cache(self) -> None:
         """Exibe o estado atual da cache do processador"""
         print(f"\n{'='*50}")
         print(f"Estado da Cache do Processador {self.id}")
         print(f"{'='*50}")
         print(self.cache)
-    
+
     def mostrar_historico(self) -> None:
         """Exibe o histórico de operações do processador"""
         print(f"\n{'='*50}")
