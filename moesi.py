@@ -33,7 +33,7 @@ class LinhaCache:
     def __repr__ (self):
         """
         Representação em string da linha de cache
-        Exemplo: [LINHA] Tag: 10 , Dado: 500 , Estado: EXCLUSIVE
+        Exemplo: [LINHA] Tag: 10 , Dado: 500 , Estado: E
         """
         dado_str = str(self.dado) if self.dado is not None else "Vazio"
         tag_str = str(self.tag) if self.tag is not None else "-"
@@ -227,7 +227,10 @@ class Cache():
 
 
     def ler(self, endereco : int) -> int | None:
-        """ Realiza uma leitura na cache (load)."""
+        """ 
+        Le (load) um valor armazenado em um *endereco* especifico na cache. 
+        Retorna o valor se encontrado, ou None se não existir. 
+        """
         linha = self.buscar_linha(endereco)
 
         # Read hit
