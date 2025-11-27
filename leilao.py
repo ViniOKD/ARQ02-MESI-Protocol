@@ -27,9 +27,9 @@ class Comprador(Processador):
         """
         Verifica o preço atual do item - Uma operação de leitura (READ).
         """
-        valor = self.ler(item.id_item)
-        print(f"[{self.nome}] Consultou Item {item.id_item}: R$ {valor}")
-        return valor
+        preco = self.ler(item.id_item)
+        print(f"[{self.nome}] Consultou Item {item.id_item}: R$ {preco}")
+        return preco
     
     def dar_lance(self, item: Item, valor_lance: float) -> bool:
         """
@@ -117,11 +117,9 @@ class Leilao:
         # Se encontrar M ou O
         if linha in [Estado.MODIFIED, Estado.OWNED]:
             valor = linha.dado
-            if valor is not None:
-                return comprador, valor
         
         # Se ninguém tem o dado em M ou O, vale o que está na RAM
-        valor_ram = self.ram.ler(item.id_item)
+        valor_ram: int = self.ram.ler(item.id_item)
         return None, valor_ram
 
     def encerrar_item(self, item: Item) -> None:
@@ -138,7 +136,13 @@ class Leilao:
         print(f"[Leilão] Vencedor: {vencedor.nome if vencedor else 'Nenhum vencedor'}")
         print(f"[Leilão] Preço final: R$ {preco_final}")
 
+    def interface(self) -> None:
+        """
+        Interface simples de linha de comando para interagir com o leilão.
+        """
         
+
+
 
 
 
