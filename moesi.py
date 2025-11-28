@@ -1,10 +1,8 @@
-from __future__ import annotations # Resolve o forward reference type hinting - causado por Barramento referenciar Cache antes dela ser declarada
+from __future__ import annotations 
 from enum import Enum
 import random
 from collections import deque
-from abc import ABC, abstractmethod
-
-#TODO: Resolver como armazenar o log de operações   
+from abc import ABC
 
 
 TAMANHO_RAM = 50
