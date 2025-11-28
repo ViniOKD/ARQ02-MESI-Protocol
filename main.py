@@ -6,3 +6,12 @@ Feito por:
 - Carlos Eduardo Da Paixão Bravin
 - Vinicius Taguchi Okada
 """
+from leilao import Leilao
+
+
+def main():
+    leilao = Leilao()
+    leilao.interface()
+
+if __name__ == "__main__":
+    main()

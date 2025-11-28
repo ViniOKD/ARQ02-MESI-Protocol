@@ -3,8 +3,8 @@ from enum import Enum
 import random
 from collections import deque
 from abc import ABC
-
-
+from colors import color
+import copy
 TAMANHO_RAM = 50
 TAMANHO_CACHE = 5
 
@@ -51,7 +51,7 @@ class RAM:
 
     def log(self, msg: str) -> None:
         """ Função de log para a RAM """
-        print(f"[RAM] {msg}")
+        print(color(f"[RAM] {msg}", "ram" ))
 
 
     def ler(self, endereco : int) -> int | None:
@@ -101,7 +101,7 @@ class Barramento():
 
     def log(self, msg: str) -> None:
         """ Função de log para o barramento """
-        print(f"[Barramento] {msg}")
+        print(color(f"[Barramento] {msg}", "barramento"))
 
     def solicitar_leitura(self, endereco : int, id_requisitante : int) -> tuple[int | None, Estado]:
         """
@@ -201,7 +201,7 @@ class Cache():
 
     def log(self, msg: str) -> None:
         """ Função de log para o barramento """
-        print(f"[Cache {self.id}] {msg}")
+        print(color(f"[Cache {self.id}] {msg}", "cache"))
 
 
     def buscar_linha(self, endereco : int) -> LinhaCache | None:
@@ -211,8 +211,10 @@ class Cache():
         """
 
         for linha in self.linhas:
+            #print(linha)
             if linha.tag == endereco:
-                return linha
+
+                return copy.deepcopy(linha)
         return None
     
     def _logica_fifo(self):
@@ -259,7 +261,7 @@ class Cache():
         self.linhas.append(nova_linha)
         return dado
     
-    def escrever(self, endereco : int, valor : int) -> None:
+    def escrever(self, endereco : int, valor : int) :
         """
         Realiza uma escrita na cache (store).
         """
@@ -282,7 +284,7 @@ class Cache():
                 linha.estado = Estado.MODIFIED
             
             linha.dado = valor
-            return
+            return linha
         
         # Write miss
         self.log(f"WRITE MISS no endereço {endereco}.")
@@ -323,8 +325,8 @@ class Processador(ABC):
     
     def log(self, msg: str) -> None:
         """Registra uma mensagem no histórico do processador"""
-        mensagem = f"[Processador {self.id}] {msg}"
-        print(mensagem)
+        print(color(f"[Processador {self.id}] {msg}", "processador"))
+        
 
 
     def ler(self, endereco: int) -> int | None:

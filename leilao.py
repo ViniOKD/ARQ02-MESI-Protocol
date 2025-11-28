@@ -1,5 +1,7 @@
 from moesi import *
 import os
+from colors import color
+import copy
 
 # Classe dos itens do leilão
 class Item:
@@ -38,13 +40,13 @@ class Comprador(Processador):
         se o lance for maior, realiza uma escrita (WRITE) do novo valor.
         """
 
-        print(f"\n[{self.nome}] Tentando lance de R$ {valor_lance}")
+        print(color(f"\n[{self.nome}] Tentando lance de R$ {valor_lance}", "ciano"))
         if item.encerrado:
-            print(f"O leilão desse item já foi encerrado.")
+            print(color(f"O leilão desse item já foi encerrado.", "vermelho"))
             return False
         
         if valor_lance <= 0:
-            print(f"Lance inválido. O valor do lance deve ser maior que zero.")
+            print(color(f"Lance inválido. O valor do lance deve ser maior que zero.", "vermelho"))
             return False
 
         # Gera Read Miss/Hit, na tentativa de ler o valor atual do item
@@ -56,10 +58,10 @@ class Comprador(Processador):
             # Invalida as outras cópias na cache dos outros processadores
             self.escrever(item.id, valor_lance)
 
-            print(f"\n[Leilão] Lance aceito! {self.nome} valor R$ {valor_lance}")
+            print(color(f"\n[Leilão] Lance aceito! {self.nome} valor R$ {valor_lance}", "verde"))
             return True
         else:
-            print(f"\n[Leilão] Lance rejeitado! o valor atual é R$ {valor_atual}")
+            print(color(f"\n[Leilão] Lance rejeitado! o valor atual é R$ {valor_atual}", "vermelho"))
             return False
         
 class Leilao:
@@ -69,7 +71,7 @@ class Leilao:
         self.compradores: list[Comprador] = []
         self.itens: list[Item] = []
         
-    def adicionar_item(self, nome: str, preco_inicial: float) -> Item:
+    def adicionar_item(self, nome: str, preco_inicial: int) -> Item:
         """
         Adiciona um novo item ao leilão, a partir da entrada *nome* e *preco_incial*.
         """
@@ -80,7 +82,7 @@ class Leilao:
         # Inicializa o preço na RAM
         # Setup inicial, antes dos compradores entrarem em ação
         self.ram.escrever(id, preco_inicial)  
-        print(f"[Leilão] Item adicionado: {item}, no endereço {item.id}")
+        print(color(f"[Leilão] Item adicionado: {item}, no endereço {item.id}", "azul_claro"))
         return item
     
     def adicionar_comprador(self, nome: str) -> Comprador:
@@ -96,7 +98,7 @@ class Leilao:
         self.compradores.append(comprador)
         self.barramento.colocar_cache(cache)
 
-        print(f"[Leilão] Comprador adicionado: {comprador.nome}")
+        print(color(f"[Leilão] Comprador adicionado: {comprador.nome}", "azul_claro"))
         return comprador
     
     def descobrir_vencedor(self, item: Item) -> tuple[Comprador | None, float]:
@@ -104,20 +106,31 @@ class Leilao:
         Descobre o vencedor do leilão do *item* especificado.
         Se alguma cache tiver o dado em 'MODIFIED' ou 'OWNED', esse é o vencedor."
         """
+        linha, comprador = None, None
         
+        if self.compradores == []:
+            return None, self.ram.ler(item.id)
+    
         # Varre as caches dos compradores
         for comprador in self.compradores:
+            print(comprador.cache.buscar_linha(item.id))
             linha = comprador.cache.buscar_linha(item.id)
-        
-        # Se encontrar M ou O
-        if linha and linha.estado in [Estado.MODIFIED, Estado.OWNED]:
-            valor = linha.dado
-            return comprador, valor
+            if linha == None:
+                continue
+            print("a:", linha.estado)
+            # Se encontrar M ou O
+            if linha.estado in [Estado.EXCLUSIVE, Estado.MODIFIED, Estado.OWNED]:
+                valor = linha.dado
+                print(comprador)
+                print(valor)
+                return comprador, valor
         
         # Se ninguém tem o dado em M ou O, vale o que está na RAM
         valor_ram: int = self.ram.ler(item.id)
+        print("Nao achou ngm com M ou O")
         return None, valor_ram
-
+        
+        
     def encerrar_item(self, item: Item) -> None:
         """
         Encerra o leilão do *item* especificado.
@@ -128,9 +141,10 @@ class Leilao:
 
         vencedor, preco_final = self.descobrir_vencedor(item)        
         item.encerrado = True
-        print(f"[Leilão] Item encerrado: {item}")
-        print(f"[Leilão] Vencedor: {vencedor.nome if vencedor else 'Nenhum vencedor'}")
-        print(f"[Leilão] Preço final: R$ {preco_final}")
+        self.itens.pop(item.id)
+        print(color(f"[Leilão] Item encerrado: {item}", "azul_claro"))
+        print(color(f"[Leilão] Vencedor: {vencedor.nome if vencedor else 'Nenhum vencedor'}", "verde"))
+        print(color(f"[Leilão] Preço final: R$ {preco_final}", "amarelo_claro"))
 
     def interface(self) -> None:
         """
@@ -139,106 +153,112 @@ class Leilao:
         leilao = True
         while leilao:
        
-            print("\n--- Menu do Leilão ---")
+            print(color("\n--- Menu do Leilão ---", "azul_claro"))
             print("1. Adicionar Item")
             print("2. Adicionar Comprador")
             print("3. Verificar Preço do Item")
             print("4. Dar Lance")
             print("5. Encerrar Leilão do Item")
             print("6. Sair")
-            escolha = input("Escolha uma opção: ")
+            escolha = input(color("Escolha uma opção: ", "azul_claro"))
 
             if escolha == '1':
 
-                nome = str(input("Nome do Item: "))
+                nome = str(input(color("Nome do Item: ", "azul_claro")))
                 try:
-                    preco_inicial = int(input("Preço Inicial: R$ "))
+                    preco_inicial = int(input(color("Preço Inicial: R$ ", "amarelo")))
                     self.adicionar_item(nome, preco_inicial)
                 except ValueError:
-                    print("Preço inválido. Tente novamente.")
+                    print(color("Preço inválido. Tente novamente.", "vermelho"))
 
             elif escolha == '2':
-                nome = str(input("Nome do Comprador: "))
-                self.adicionar_comprador(nome)
+                nome = str(input(color("Nome do Comprador: ", "azul_claro")))
+                if nome not in self.compradores:
+                    self.adicionar_comprador(nome)
+                else:
+                    print(color("Já existe um comprador de mesmo nome, escolha outro", "vermelho"))
 
             elif escolha == '3':
                 if not self.compradores:
-                    print("Nenhum comprador cadastrado.")
+                    print(color("Nenhum comprador cadastrado.", "vermelho"))
                     continue
                 if not self.itens:
-                    print("Nenhum item cadastrado.")
+                    print(color("Nenhum item cadastrado.", "vermelho"))
                     continue
 
-                print('\n\nCompradores disponíveis:')
+                print(color('\n\nCompradores disponíveis:', "ciano_neon"))
                 for comprador in self.compradores:
-                    print(f"ID: {comprador.id} - Nome: {comprador.nome}")
+                    print(color(f"ID: {comprador.id} - Nome: {comprador.nome}", "ciano_claro"))
 
-                print('\n')
+   
                 
-                print('Itens disponíveis:')
+                print(color('\nItens disponíveis:', "verde_neon"))
                 for item in self.itens:
-                    print(f"ID: {item.id} - Nome: {item.nome}")
+                    print(color(f"ID: {item.id} - Nome: {item.nome}", "verde"))
                 
-                print('\n')
+
 
                 try:
 
-                    id_comp = int(input("ID do Comprador: "))
-                    item_id = int(input("ID do Item: "))
+                    id_comp = int(input(color("\n\nID do Comprador: ", "ciano_neon")))
+                    item_id = int(input(color("\nID do Item: ", "verde_neon")))
                     print("\n\n")
                     if 0 <= id_comp < len(self.compradores) and 0 <= item_id < len(self.itens):
                         self.compradores[id_comp].verificar_preco(self.itens[item_id])
                     else:
-                        print("ID inválido. Tente novamente.")
+                        print(color("ID inválido. Tente novamente.", "vermelho"))
                 # ValueError - caso o input não seja um número
                 # IndexError - caso o ID não exista na lista
                 except (ValueError, IndexError):
-                    print("ID inválido. Tente novamente.")
+                    print(color("ID inválido. Tente novamente.", "vermelho"))
                 
             elif escolha == '4':
-                print('\n\nCompradores disponíveis:')
+                if not self.compradores:
+                    print(color("Nenhum comprador cadastrado.", "vermelho"))
+                    continue
+                if not self.itens:
+                    print(color("Nenhum item cadastrado.", "vermelho"))
+                    continue
+                print(color('\n\nCompradores disponíveis:', "ciano_neon"))
                 for comprador in self.compradores:
-                    print(f"ID: {comprador.id} - Nome: {comprador.nome}")
+                    print(color(f"ID: {comprador.id} - Nome: {comprador.nome}", "ciano_claro"))
 
-                print('Itens disponíveis:')
+                print(color('\n\nItens disponíveis:', "verde_neon"))
                 for item in self.itens:
-                    print(f"ID: {item.id} - Nome: {item.nome}")
+                   print(color(f"ID: {item.id} - Nome: {item.nome}", "verde"))
 
                 try:
-                    id = int(input("ID do Comprador: "))
-                    item_id = int(input("ID do Item: "))
-                    valor_lance = int(input("Valor do Lance: R$ "))
+                    id_comp = int(input(color("\n\nID do Comprador: ", "ciano_neon")))
+                    item_id = int(input(color("\nID do Item: ", "verde_neon")))
+                    valor_lance = int(input(color("\nValor do Lance: R$ ", "amarelo_claro")))
                     print("\n\n")
                     if 0 <= id_comp < len(self.compradores) and 0 <= item_id < len(self.itens):
-                        self.compradores[id].dar_lance(self.itens[item_id], valor_lance)
+                        self.compradores[id_comp].dar_lance(self.itens[item_id], valor_lance)
                     else:
-                        print("ID inválido. Tente novamente.")
+                        print(color("ID inválido. Tente novamente.", "vermelho"))
                 except (ValueError, IndexError):
-                    print("ID inválido. Tente novamente.")
+                    print(color("ID inválido. Tente novamente.", "vermelho"))
 
                     
             elif escolha == '5': # TODO: adicionar verificação de IDs
                 if not self.itens:
-                    print("Nenhum item cadastrado.")
+                    print(color("Nenhum item cadastrado.", "vermelho"))
                     continue
-                
-                item_id = int(input("ID do Item: "))
+
+                print(color('Itens disponíveis:', "verde_neon"))
+                for item in self.itens:
+                    print(color(f"ID: {item.id} - Nome: {item.nome}", "verde"))
+                item_id = int(input(color("ID do Item: ", "verde_neon")))
                 if item_id < 0 or item_id >= len(self.itens):
-                    print("ID do Item inválido. Tente novamente.")
+                    print(color("ID inválido. Tente novamente.", "vermelho"))
                 else:
                     self.encerrar_item(self.itens[item_id])
 
             elif escolha == '6':
                 leilao = False
-                print("Encerrando o leilão. Obrigado por participar!")
+                print(color("Encerrando o leilão. Obrigado por participar!", "amarelo_claro"))
             else:
-                print("Opção inválida. Tente novamente.")
+                print(color("Opção inválida. Tente novamente.", "vermelho"))
             
 
 
-def main():
-    leilao = Leilao()
-    leilao.interface()
-
-if __name__ == "__main__":
-    main()

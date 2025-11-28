@@ -92,4 +92,19 @@ def teste4():
 
 
 #teste3()
-teste2()
+#teste2()
+
+def leilao_linha():
+    l1 = Leilao()
+    bs = Barramento(RAM(50))
+    l1.adicionar_comprador("nome")
+    l1.adicionar_comprador("claudio")
+    l1.adicionar_item("banana", 50)
+    l1.adicionar_comprador("fernando en")
+    l1.compradores[0].dar_lance(l1.itens[0], 100)
+    l1.compradores[1].dar_lance(l1.itens[0], 120)
+    l1.compradores[2].dar_lance(l1.itens[0], 130)
+    l1.encerrar_item(l1.itens[0])
+
+
+leilao_linha()
