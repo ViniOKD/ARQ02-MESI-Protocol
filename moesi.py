@@ -1,15 +1,12 @@
-from __future__ import annotations # resolve o forward reference type hinting - causado por Barramento referenciar Cache antes dela ser declarada
-from abc import ABC, abstractmethod
+from __future__ import annotations 
 from enum import Enum
 import random
 from collections import deque
+from abc import ABC
 
 
 TAMANHO_RAM = 50
 TAMANHO_CACHE = 5
-#TODO: VERIFICAR A UTILIZAÇAO DA FIFO IMPROVISADA NA CACHE
-# POSSIVELMENTE ADICIONAR COLLECTIONS
-
 
 # definição dos estados da MOESI
 class Estado(Enum):
@@ -34,7 +31,7 @@ class LinhaCache:
     def __repr__ (self):
         """
         Representação em string da linha de cache
-        Exemplo: [LINHA] Tag: 10 , Dado: 500 , Estado: EXCLUSIVE
+        Exemplo: [LINHA] Tag: 10 , Dado: 500 , Estado: E
         """
         dado_str = str(self.dado) if self.dado is not None else "Vazio"
         tag_str = str(self.tag) if self.tag is not None else "-"
@@ -52,6 +49,11 @@ class RAM:
         self.memoria  : list[int] = [random.randint(1, 9999) for _ in range(tamanho)]
     
 
+    def log(self, msg: str) -> None:
+        """ Função de log para a RAM """
+        print(f"[RAM] {msg}")
+
+
     def ler(self, endereco : int) -> int | None:
         """
         Retorna o valor armazenado no endereço especificado da memória RAM.
@@ -61,7 +63,7 @@ class RAM:
         if 0 <= endereco < self.tamanho:
             return self.memoria[endereco]
         else:
-            print(f"Endereço {endereco} inválido na RAM.")
+            self.log(f"Endereço {endereco} inválido na RAM.")
             return None
         
     def escrever(self, endereco : int, valor : int ) -> None:
@@ -73,7 +75,7 @@ class RAM:
         if 0 <= endereco < self.tamanho:
             self.memoria[endereco] = valor
         else:
-            print(f"Endereço {endereco} inválido na RAM.")
+            self.log(f"Endereço {endereco} inválido na RAM.")
 
     def __repr__(self):
         """
@@ -191,16 +193,16 @@ class Barramento():
 # classe da cache
 class Cache():
     def __init__ (self, id_cache : int, barramento : Barramento, tamanho : int = TAMANHO_CACHE):
-        """
-        Simula uma cache simples
-        """
-
+        """ Inicializa uma cache com o barramento, id, tamanho e suas linhas. """
         self.id : int = id_cache
         self.barramento : Barramento = barramento
         self.tamanho : int = tamanho
-        # será usado uma lista como fila. O final é o mais recente, o início é o mais antigo
-        #self.linhas : list[LinhaCache] = []
-        self.linhas : deque[LinhaCache] = deque() # nao limitar o tamanho com maxlen para controlar manualmente a remoção com write-back
+        self.linhas : deque[LinhaCache] = deque() # Não limitar o tamanho com maxlen para controlar manualmente a remoção com write-back
+
+    def log(self, msg: str) -> None:
+        """ Função de log para o barramento """
+        print(f"[Cache {self.id}] {msg}")
+
 
     def buscar_linha(self, endereco : int) -> LinhaCache | None:
         """
@@ -213,12 +215,10 @@ class Cache():
                 return linha
         return None
     
-    # método protegido X
-    # indica que é um método interno da classe -> metodo ""protegido"" seria com __
     def _logica_fifo(self):
         """
-        Responsável por manter a política FIFO, isto é,
-        remover o mais antigo (índice 0). Se for sujo (M ou O), escreve de volta na RAM, write-back.
+        Responsável por manter a política FIFO, isto é, remover o mais antigo. 
+        Se for sujo (M ou O), escreve de volta na RAM, write-back.
         """
 
         if len(self.linhas) >= self.tamanho:    
@@ -226,22 +226,18 @@ class Cache():
     
             if linha_removida.estado in [Estado.MODIFIED, Estado.OWNED]:
                 # Write-back na RAM
-                #print(f'[Cache {self.id}]: Write-back do endereço {linha_removida.tag} para RAM.')
-                #self.barramento.ram.escrever(linha_removida.tag, linha_removida.dado)
                 self.write_back(linha_removida.tag, linha_removida.dado)
     
-    # Pra ficar mais legivel que self.barramento.ram.escrever...
     def write_back(self, tag : int , dado : int ) -> None:
-        """
-        Realiza o write-back de uma linha suja (M ou O) para a RAM.
-        """
-        print(f'[Cache {self.id}]: Write-back do endereço {tag} para RAM.')
+        """ Realiza o write-back de uma linha suja (M ou O) para a RAM. """
+        self.log(f"Write-back do endereço {tag} para RAM.")
         self.barramento.ram.escrever(tag, dado)
 
 
     def ler(self, endereco : int) -> int | None:
-        """
-        Realiza uma leitura na cache(load).
+        """ 
+        Le (load) um valor armazenado em um *endereco* especifico na cache. 
+        Retorna o valor se encontrado, ou None se não existir. 
         """
         linha = self.buscar_linha(endereco)
 
@@ -251,10 +247,10 @@ class Cache():
             return linha.dado
         
         # Read miss
-        print(f'[Cache {self.id}]: READ MISS no endereço {endereco}.')
+        self.log(f'READ MISS no endereço {endereco}.')
         self._logica_fifo() # aplica a política FIFO
 
-        dado, novo_estado = self.barramento.solicitar_leitura(endereco, self.id) # trocar esse self.barramento.solicitar_leitura por uma funcao pra melhorar leitura
+        dado, novo_estado = self.barramento.solicitar_leitura(endereco, self.id)
 
         nova_linha = LinhaCache()
         nova_linha.tag = endereco
@@ -265,13 +261,13 @@ class Cache():
     
     def escrever(self, endereco : int, valor : int) -> None:
         """
-        Realiza uma escrita na cache(store).
+        Realiza uma escrita na cache (store).
         """
         linha = self.buscar_linha(endereco)
 
         # Write hit
         if linha and linha.estado != Estado.INVALID:
-            print(f'[Cache {self.id}]: WRITE HIT no endereço {endereco}.')
+            self.log(f"WRITE HIT no endereço {endereco}.")
 
             if linha.estado == Estado.MODIFIED:
                 # Já está em MODIFIED, nada a fazer
@@ -289,12 +285,11 @@ class Cache():
             return
         
         # Write miss
-        print(f'[Cache {self.id}]: WRITE MISS no endereço {endereco}.')
+        self.log(f"WRITE MISS no endereço {endereco}.")
         self._logica_fifo()
 
         # Solicita a propriedade da escrita
         # Garantir que outras caches invalidem suas cópias
-        # _ Indica que o valor da função não será usado
         self.barramento.solicitar_escrita(endereco, self.id)
 
         nova_linha = LinhaCache()
@@ -310,14 +305,13 @@ class Cache():
         res = f"[Cache {self.id}, tamanho {self.tamanho}]\n"
 
         if not self.linhas:
-            res += "  (vazia)\n"
+            res += "Vazia\n"
         else:
             for linha in self.linhas:
                 res += f" Estado: {linha.estado.value} | Tag: {linha.tag} | Dado: {linha.dado}\n"
         return res
 
-
-# --- CLASSE PROCESSADOR (COM LÓGICA DE LEILÃO INTEGRADA) ---
+# Classe do processador
 class Processador(ABC):
     def __init__(self, id_processador: int, cache: Cache):
         """
@@ -325,117 +319,52 @@ class Processador(ABC):
         """
         self.id: int = id_processador
         self.cache: Cache = cache
-        self.historico: list[str] = []
-
-
+        
+    
     def log(self, msg: str) -> None:
         """Registra uma mensagem no histórico do processador"""
         mensagem = f"[Processador {self.id}] {msg}"
         print(mensagem)
-        self.historico.append(mensagem)
-    
 
-    def load(self, endereco: int) -> int | None:
+
+    def ler(self, endereco: int) -> int | None:
         """
         Realiza uma operação de leitura (load) de um endereço.
         """
-        self.log(f"Executando LOAD do endereço {endereco}")
+        self.log(f"Executando leitura do endereço {endereco}")
         dado = self.cache.ler(endereco)
         
         if dado is not None:
-            self.log(f"LOAD concluído. Valor: {dado}")
+            self.log(f"Leitura concluída. Valor: {dado}")
         else:
-            self.log(f"LOAD falhou para endereço {endereco}")
+            self.log(f"Leitura falhou para endereço {endereco}")
         
         return dado
     
-    def store(self, endereco: int, valor: int) -> None:
+
+    def escrever(self, endereco: int, valor: int) -> None:
         """
         Realiza uma operação de escrita (store) em um endereço.
         """
-        self.log(f"Executando STORE no endereço {endereco} com valor {valor}")
+        self.log(f"Executando escrita no endereço {endereco} com valor {valor}")
         self.cache.escrever(endereco, valor)
-        self.log(f"STORE concluído")
+        self.log(f"Escrita concluída")
         
-
+    
     def mostrar_cache(self) -> None:
         """Exibe o estado atual da cache do processador"""
         print(f"\n{'='*50}")
-        print(f"Estado da Cache do Processador {self.id}")
+        self.log(f"Estado da Cache") 
         print(f"{'='*50}")
         print(self.cache)
 
-    def mostrar_historico(self) -> None:
-        """Exibe o histórico de operações do processador"""
-        print(f"\n{'='*50}")
-        print(f"Histórico do Processador {self.id}")
-        print(f"{'='*50}")
-        if not self.historico:
-            print("  (nenhuma operação realizada)")
-        else:
-            for operacao in self.historico:
-                print(f"  {operacao}")
-    
-    def limpar_historico(self) -> None:
-        """Limpa o histórico de operações"""
-        self.historico.clear()
-        self.log("Histórico limpo")
-    
     def __repr__(self) -> str:
         """Representação em string do processador"""
         return f"[Processador {self.id}] Cache: {len(self.cache.linhas)}/{self.cache.tamanho} linhas ocupadas"
 
 
-# TESTE
-def main() -> None:
-    print("\nSIMULAÇÃO MOESI\n")
-
-    ram = RAM(TAMANHO_RAM)
-    ram.escrever(10, 100) 
-    print(f"Valor inicial RAM[10]: {ram.ler(10)}") # esperado : 100
-    bus = Barramento(ram)
-    p1 = Cache(1, bus)
-    p2 = Cache(2, bus)
-    p3 = Cache(3, bus)
-
-    bus.colocar_cache(p1)
-    bus.colocar_cache(p2)
-    bus.colocar_cache(p3)
-
-    # 1. P1 lê 10 (Miss -> E)
-    p1.ler(10)
-    
-    # 2. P1 escreve 500 (Hit -> M)
-    p1.escrever(10, 500)
-
-    # 3. P2 lê 10 (Miss -> P1 fornece -> P1=O, P2=S)
-    p2.ler(10)
-    
-    print("\n--- Estado Intermediário (P1=O, P2=S) ---")
-    print(p1) 
-    print(p2)
-
-    # 4. P3 escreve 999 (Miss -> Invalida P1 e P2 -> P3=M)
-    p3.escrever(10, 999)
-    
-    print("\n--- Estado Final ---")
-    print(p1) # Esperado: Inválido (não deve aparecer ou estado I)
-    print(p2) # Esperado: Inválido
-    print(p3) # Esperado: MODIFIED, valor 999
-    
-    # 5. Verificação da RAM
-    # A RAM deve ter 100. O valor 999 está sujo em P3. O valor 500 foi perdido (sobrescrito) ou descartado.
-    print(f"\nValor na RAM[10]: {ram.ler(10)} (Esperado: 100 - desatualizado)")
-    print(p3)
 
 
-if __name__ == "__main__":
-    main()
-
-
-    
 
 
   
-
-
