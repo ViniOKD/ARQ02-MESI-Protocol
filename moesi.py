@@ -130,23 +130,23 @@ class Barramento():
                 if estado_anterior == Estado.MODIFIED:
                     # Agora ela é OWNED, pois vai compartilhar o dado e se responsabilizar pela sua atualização na RAM
                     linha.estado = Estado.OWNED
-                    self.log(f'{cache.id} (M->O): Forneceu dado modificado')
+                    self.log(f'Cache {cache.id} (M->O): Forneceu dado modificado')
 
                 # Outra cache tinha o dado limpo exclusivo (E)
                 elif estado_anterior == Estado.EXCLUSIVE:
                     # Vai compartilhar o dado, então passa a ser SHARED
                     linha.estado = Estado.SHARED
-                    self.log(f'{cache.id} (E->S): Forneceu dado exclusivo limpo')
+                    self.log(f'Cache {cache.id} (E->S): Forneceu dado exclusivo limpo')
 
                 # Outra cache tinha dado modificado compartilhado (O)
                 elif estado_anterior == Estado.OWNED:
                     # Continua sendo OWNED, pois já estava compartilhado
-                    self.log(f'{cache.id} (O->O): Forneceu dado compartilhado modificado')
+                    self.log(f'Cache {cache.id} (O->O): Forneceu dado compartilhado modificado')
                 
                 # Outra cache tinha dado compartilhado (S)
                 elif estado_anterior == Estado.SHARED:
                     # Continua sendo SHARED, pois já estava compartilhado
-                    self.log(f'{cache.id} (S->S): Forneceu dado compartilhado')
+                    self.log(f'Cache {cache.id} (S->S): Forneceu dado compartilhado')
 
         if outra_cache_tem:
             return dado_encontrado, Estado.SHARED

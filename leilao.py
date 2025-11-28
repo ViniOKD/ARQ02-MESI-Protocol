@@ -45,9 +45,10 @@ class Comprador(Processador):
         
         if valor_lance <= 0:
             print(f"Lance inválido. O valor do lance deve ser maior que zero.")
+            return False
 
         # Gera Read Miss/Hit, na tentativa de ler o valor atual do item
-        valor_atual: int | None = self.ler(item.id) 
+        valor_atual: int | None = self.ler(item.id) # TODO: VER ESSA QUESTÃO DO INT OU FLOAT
 
         if valor_atual is not None and valor_lance > valor_atual:
             # Se o lance for maior, realiza a escrita do novo valor
@@ -79,9 +80,7 @@ class Leilao:
         # Inicializa o preço na RAM
         # Setup inicial, antes dos compradores entrarem em ação
         self.ram.escrever(id, preco_inicial)  
-
         print(f"[Leilão] Item adicionado: {item}, no endereço {item.id}")
-
         return item
     
     def adicionar_comprador(self, nome: str) -> Comprador:
@@ -96,6 +95,7 @@ class Leilao:
         comprador = Comprador(id_proc, cache, nome)
         self.compradores.append(comprador)
         self.barramento.colocar_cache(cache)
+
         print(f"[Leilão] Comprador adicionado: {comprador.nome}")
         return comprador
     
@@ -110,7 +110,7 @@ class Leilao:
             linha = comprador.cache.buscar_linha(item.id)
         
         # Se encontrar M ou O
-        if linha in [Estado.MODIFIED, Estado.OWNED]:
+        if linha and linha.estado in [Estado.MODIFIED, Estado.OWNED]:
             valor = linha.dado
             return comprador, valor
         
@@ -151,25 +151,48 @@ class Leilao:
             if escolha == '1':
 
                 nome = str(input("Nome do Item: "))
-                preco_inicial = int(input("Preço Inicial: R$ "))
-                self.adicionar_item(nome, preco_inicial)
+                try:
+                    preco_inicial = int(input("Preço Inicial: R$ "))
+                    self.adicionar_item(nome, preco_inicial)
+                except ValueError:
+                    print("Preço inválido. Tente novamente.")
+
             elif escolha == '2':
                 nome = str(input("Nome do Comprador: "))
                 self.adicionar_comprador(nome)
+
             elif escolha == '3':
+                if not self.compradores:
+                    print("Nenhum comprador cadastrado.")
+                    continue
+                if not self.itens:
+                    print("Nenhum item cadastrado.")
+                    continue
+
                 print('\n\nCompradores disponíveis:')
                 for comprador in self.compradores:
                     print(f"ID: {comprador.id} - Nome: {comprador.nome}")
 
+                print('\n')
+                
                 print('Itens disponíveis:')
                 for item in self.itens:
                     print(f"ID: {item.id} - Nome: {item.nome}")
+                
+                print('\n')
+
                 try:
-                    id = int(input("ID do Comprador: "))
+
+                    id_comp = int(input("ID do Comprador: "))
                     item_id = int(input("ID do Item: "))
                     print("\n\n")
-                    self.compradores[id].verificar_preco(self.itens[item_id])
-                except IndexError:
+                    if 0 <= id_comp < len(self.compradores) and 0 <= item_id < len(self.itens):
+                        self.compradores[id_comp].verificar_preco(self.itens[item_id])
+                    else:
+                        print("ID inválido. Tente novamente.")
+                # ValueError - caso o input não seja um número
+                # IndexError - caso o ID não exista na lista
+                except (ValueError, IndexError):
                     print("ID inválido. Tente novamente.")
                 
             elif escolha == '4':
@@ -180,17 +203,25 @@ class Leilao:
                 print('Itens disponíveis:')
                 for item in self.itens:
                     print(f"ID: {item.id} - Nome: {item.nome}")
+
                 try:
                     id = int(input("ID do Comprador: "))
                     item_id = int(input("ID do Item: "))
                     valor_lance = int(input("Valor do Lance: R$ "))
                     print("\n\n")
-                    self.compradores[id].dar_lance(self.itens[item_id], valor_lance)
-                except IndexError:
+                    if 0 <= id_comp < len(self.compradores) and 0 <= item_id < len(self.itens):
+                        self.compradores[id].dar_lance(self.itens[item_id], valor_lance)
+                    else:
+                        print("ID inválido. Tente novamente.")
+                except (ValueError, IndexError):
                     print("ID inválido. Tente novamente.")
 
                     
-            elif escolha == '5':
+            elif escolha == '5': # TODO: adicionar verificação de IDs
+                if not self.itens:
+                    print("Nenhum item cadastrado.")
+                    continue
+                
                 item_id = int(input("ID do Item: "))
                 if item_id < 0 or item_id >= len(self.itens):
                     print("ID do Item inválido. Tente novamente.")
@@ -203,11 +234,11 @@ class Leilao:
             else:
                 print("Opção inválida. Tente novamente.")
             
-    def limpa_tela(self):
-        # Limpa a tela do terminal
-        os.system('cls' if os.name == 'nt' else 'clear')
 
 
+def main():
+    leilao = Leilao()
+    leilao.interface()
 
-
-
+if __name__ == "__main__":
+    main()
