@@ -51,6 +51,11 @@ class RAM:
         self.memoria  : list[int] = [random.randint(1, 9999) for _ in range(tamanho)]
     
 
+    def log(self, msg: str) -> None:
+        """ Função de log para a RAM """
+        print(f"[RAM] {msg}")
+
+
     def ler(self, endereco : int) -> int | None:
         """
         Retorna o valor armazenado no endereço especificado da memória RAM.
@@ -60,7 +65,7 @@ class RAM:
         if 0 <= endereco < self.tamanho:
             return self.memoria[endereco]
         else:
-            print(f"Endereço {endereco} inválido na RAM.")
+            self.log(f"Endereço {endereco} inválido na RAM.")
             return None
         
     def escrever(self, endereco : int, valor : int ) -> None:
@@ -72,7 +77,7 @@ class RAM:
         if 0 <= endereco < self.tamanho:
             self.memoria[endereco] = valor
         else:
-            print(f"Endereço {endereco} inválido na RAM.")
+            self.log(f"Endereço {endereco} inválido na RAM.")
 
     def __repr__(self):
         """
@@ -196,6 +201,11 @@ class Cache():
         self.tamanho : int = tamanho
         self.linhas : deque[LinhaCache] = deque() # Não limitar o tamanho com maxlen para controlar manualmente a remoção com write-back
 
+    def log(self, msg: str) -> None:
+        """ Função de log para o barramento """
+        print(f"[Cache {self.id}] {msg}")
+
+
     def buscar_linha(self, endereco : int) -> LinhaCache | None:
         """
         Busca uma linha de cache pelo endereço *tag*.
@@ -222,7 +232,7 @@ class Cache():
     
     def write_back(self, tag : int , dado : int ) -> None:
         """ Realiza o write-back de uma linha suja (M ou O) para a RAM. """
-        print(f'[Cache {self.id}]: Write-back do endereço {tag} para RAM.')
+        self.log(f"Write-back do endereço {tag} para RAM.")
         self.barramento.ram.escrever(tag, dado)
 
 
@@ -239,7 +249,7 @@ class Cache():
             return linha.dado
         
         # Read miss
-        print(f'[Cache {self.id}]: READ MISS no endereço {endereco}.')
+        self.log(f'READ MISS no endereço {endereco}.')
         self._logica_fifo() # aplica a política FIFO
 
         dado, novo_estado = self.barramento.solicitar_leitura(endereco, self.id)
@@ -259,7 +269,7 @@ class Cache():
 
         # Write hit
         if linha and linha.estado != Estado.INVALID:
-            print(f'[Cache {self.id}]: WRITE HIT no endereço {endereco}.')
+            self.log(f"WRITE HIT no endereço {endereco}.")
 
             if linha.estado == Estado.MODIFIED:
                 # Já está em MODIFIED, nada a fazer
@@ -277,7 +287,7 @@ class Cache():
             return
         
         # Write miss
-        print(f'[Cache {self.id}]: WRITE MISS no endereço {endereco}.')
+        self.log(f"WRITE MISS no endereço {endereco}.")
         self._logica_fifo()
 
         # Solicita a propriedade da escrita
@@ -346,7 +356,7 @@ class Processador(ABC):
     def mostrar_cache(self) -> None:
         """Exibe o estado atual da cache do processador"""
         print(f"\n{'='*50}")
-        print(f"Estado da Cache do Processador {self.id}")
+        self.log(f"Estado da Cache") 
         print(f"{'='*50}")
         print(self.cache)
 
@@ -355,54 +365,8 @@ class Processador(ABC):
         return f"[Processador {self.id}] Cache: {len(self.cache.linhas)}/{self.cache.tamanho} linhas ocupadas"
 
 
-# TESTE
-def main() -> None:
-    print("\nSIMULAÇÃO MOESI\n")
-
-    ram = RAM(TAMANHO_RAM)
-    ram.escrever(10, 100) 
-    print(f"Valor inicial RAM[10]: {ram.ler(10)}") # esperado : 100
-    bus = Barramento(ram)
-    p1 = Cache(1, bus)
-    p2 = Cache(2, bus)
-    p3 = Cache(3, bus)
-
-    bus.colocar_cache(p1)
-    bus.colocar_cache(p2)
-    bus.colocar_cache(p3)
-
-    # 1. P1 lê 10 (Miss -> E)
-    p1.ler(10)
-    
-    # 2. P1 escreve 500 (Hit -> M)
-    p1.escrever(10, 500)
-
-    # 3. P2 lê 10 (Miss -> P1 fornece -> P1=O, P2=S)
-    p2.ler(10)
-    
-    print("\nEstado Intermediário (P1=O, P2=S)")
-    print(p1) 
-    print(p2)
-
-    # 4. P3 escreve 999 (Miss -> Invalida P1 e P2 -> P3=M)
-    p3.escrever(10, 999)
-    
-    print("\nEstado Final")
-    print(p1) # Esperado: Inválido (não deve aparecer ou estado I)
-    print(p2) # Esperado: Inválido
-    print(p3) # Esperado: MODIFIED, valor 999
-    
-    # 5. Verificação da RAM
-    # A RAM deve ter 100. O valor 999 está sujo em P3. O valor 500 foi perdido (sobrescrito) ou descartado.
-    print(f"\nValor na RAM[10]: {ram.ler(10)} (Esperado: 100 - desatualizado)")
-    print(p3)
 
 
-if __name__ == "__main__":
-    main()
-
-
-    
 
 
   
