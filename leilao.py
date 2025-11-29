@@ -1,15 +1,17 @@
-from moesi import *
-import os
+from moesi import Estado
 from colors import color
-import copy
+from ram import RAM, TAMANHO_RAM
+from cache import Cache
+from processador import Processador
+from barramento import Barramento
 
 # Classe dos itens do leilão
 class Item:
-    def __init__(self, id_item: int, nome: str, preco_inicial: float):
+    def __init__(self, id_item: int, nome: str, preco_inicial: int):
         """ Representa um item em leilão """
         self.id: int = id_item
         self.nome: str = nome
-        self.preco: float = preco_inicial
+        self.preco: int = preco_inicial
         self.encerrado: bool = False
 
     def __repr__(self):
@@ -26,7 +28,7 @@ class Comprador(Processador):
         super().__init__(id_processador = id_proc, cache = cache)
         self.nome : str = nome 
 
-    def verificar_preco(self, item: Item) -> float | None:
+    def verificar_preco(self, item: Item) -> int | None:
         """
         Verifica o preço atual do item - Uma operação de leitura (READ).
         """
@@ -70,18 +72,20 @@ class Leilao:
         self.barramento: Barramento = Barramento(self.ram)
         self.compradores: list[Comprador] = []
         self.itens: list[Item] = []
+        self.id_item_prox: int = 0
         
     def adicionar_item(self, nome: str, preco_inicial: int) -> Item:
         """
         Adiciona um novo item ao leilão, a partir da entrada *nome* e *preco_incial*.
         """
-        id = len(self.itens) 
+        id = self.id_item_prox
         item: Item = Item(id, nome, preco_inicial)
         self.itens.append(item)
 
         # Inicializa o preço na RAM
         # Setup inicial, antes dos compradores entrarem em ação
-        self.ram.escrever(id, preco_inicial)  
+        self.ram.escrever(id, preco_inicial)
+        self.id_item_prox += 1  
         print(color(f"[Leilão] Item adicionado: {item}, no endereço {item.id}", "azul_claro"))
         return item
     
@@ -101,7 +105,7 @@ class Leilao:
         print(color(f"[Leilão] Comprador adicionado: {comprador.nome}", "azul_claro"))
         return comprador
     
-    def descobrir_vencedor(self, item: Item) -> tuple[Comprador | None, float]:
+    def descobrir_vencedor(self, item: Item) -> tuple[Comprador | None, int]:
         """
         Descobre o vencedor do leilão do *item* especificado.
         Se alguma cache tiver o dado em 'MODIFIED' ou 'OWNED', esse é o vencedor."
@@ -113,21 +117,16 @@ class Leilao:
     
         # Varre as caches dos compradores
         for comprador in self.compradores:
-            print(comprador.cache.buscar_linha(item.id))
             linha = comprador.cache.buscar_linha(item.id)
             if linha == None:
                 continue
-            print("a:", linha.estado)
             # Se encontrar M ou O
-            if linha.estado in [Estado.EXCLUSIVE, Estado.MODIFIED, Estado.OWNED]:
+            if linha.estado in [Estado.MODIFIED, Estado.OWNED]:
                 valor = linha.dado
-                print(comprador)
-                print(valor)
                 return comprador, valor
         
         # Se ninguém tem o dado em M ou O, vale o que está na RAM
         valor_ram: int = self.ram.ler(item.id)
-        print("Nao achou ngm com M ou O")
         return None, valor_ram
         
         
@@ -145,6 +144,7 @@ class Leilao:
         print(color(f"[Leilão] Item encerrado: {item}", "azul_claro"))
         print(color(f"[Leilão] Vencedor: {vencedor.nome if vencedor else 'Nenhum vencedor'}", "verde"))
         print(color(f"[Leilão] Preço final: R$ {preco_final}", "amarelo_claro"))
+        print(vencedor.cache)
 
     def interface(self) -> None:
         """
@@ -159,7 +159,8 @@ class Leilao:
             print("3. Verificar Preço do Item")
             print("4. Dar Lance")
             print("5. Encerrar Leilão do Item")
-            print("6. Sair")
+            print("6. Mostrar as caches")
+            print("7. Sair")
             escolha = input(color("Escolha uma opção: ", "azul_claro"))
 
             if escolha == '1':
@@ -255,6 +256,12 @@ class Leilao:
                     self.encerrar_item(self.itens[item_id])
 
             elif escolha == '6':
+                print(color("\n--- Caches dos Compradores ---", "azul_claro"))
+                for comprador in self.compradores:
+                    print(color(f"\nComprador: {comprador.nome}", "ciano_claro"))
+                    print(comprador.cache)
+
+            elif escolha == '7':
                 leilao = False
                 print(color("Encerrando o leilão. Obrigado por participar!", "amarelo_claro"))
             else:
