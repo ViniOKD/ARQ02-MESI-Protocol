@@ -1,7 +1,7 @@
 from abc import ABC
 from colors import color
 from cache import Cache
-
+import logging
 class Processador(ABC):
     def __init__(self, id_processador: int, cache: Cache):
         """
@@ -14,7 +14,7 @@ class Processador(ABC):
     def log(self, msg: str) -> None:
         """Registra uma mensagem no histórico do processador"""
         print(color(f"[Processador {self.id}] {msg}", "processador"))
-        
+        logging.info(f"[Processador {self.id}] {msg}")
 
 
     def ler(self, endereco: int) -> int | None:

@@ -1,6 +1,6 @@
 import random
 from colors import color
-
+import logging
 TAMANHO_RAM = 50
 
 class RAM: 
@@ -16,8 +16,8 @@ class RAM:
 
     def log(self, msg: str) -> None:
         """ Função de log para a RAM """
-        print(color(f"[RAM] {msg}", "ram" ))
-
+        print(color(f"[RAM] {msg}", "ram"))
+        logging.info(f"[RAM] {msg}")
 
     def ler(self, endereco : int) -> int | None:
         """

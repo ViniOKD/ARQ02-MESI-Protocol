@@ -4,7 +4,7 @@ from moesi import Estado
 from barramento import Barramento
 from colors import color
 from linha import LinhaCache
-
+import logging
 TAMANHO_CACHE = 5
 
 
@@ -19,6 +19,7 @@ class Cache():
     def log(self, msg: str) -> None:
         """ Função de log para o barramento """
         print(color(f"[Cache {self.id}] {msg}", "cache"))
+        logging.info(f"[Cache {self.id}] {msg}")
 
 
     def buscar_linha(self, endereco : int) -> LinhaCache | None:
@@ -26,7 +27,6 @@ class Cache():
         Busca uma linha de cache pelo endereço *tag*.
         Retorna a linha se encontrada, ou None se não existir.
         """
-
         for linha in self.linhas:
             if linha.tag == endereco:
                 return linha

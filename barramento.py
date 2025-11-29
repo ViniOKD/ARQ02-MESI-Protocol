@@ -3,7 +3,7 @@ from typing import TYPE_CHECKING
 from ram import RAM
 from colors import color
 from moesi import Estado
-
+import logging
 # Permite que o editor entenda o que é o Cache sem importar
 if TYPE_CHECKING:
     from cache import Cache
@@ -14,15 +14,18 @@ class Barramento():
         self.ram : RAM = ram # conecta o barramento à Memoria Principal
         self.caches : list[Cache] = [] # lista de caches conectadas ao barramento
     
+    def log(self, msg: str) -> None:
+        """ Função de log para o barramento """
+        print(color(f"[Barramento] {msg}", "barramento"))
+        logging.info(f"[Barramento] {msg}")
+
     def colocar_cache(self, cache : Cache):
         """ Conecta uma cache ao barramento """
         from cache import Cache
         if isinstance(cache, Cache):
             self.caches.append(cache)
 
-    def log(self, msg: str) -> None:
-        """ Função de log para o barramento """
-        print(color(f"[Barramento] {msg}", "barramento"))
+
 
     def solicitar_leitura(self, endereco : int, id_requisitante : int) -> tuple[int | None, Estado]:
         """

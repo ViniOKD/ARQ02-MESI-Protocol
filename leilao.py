@@ -4,7 +4,7 @@ from ram import RAM, TAMANHO_RAM
 from cache import Cache
 from processador import Processador
 from barramento import Barramento
-
+import logging
 # Classe dos itens do leilão
 class Item:
     def __init__(self, id_item: int, nome: str, preco_inicial: int):
@@ -224,7 +224,7 @@ class Leilao:
         self.listar_itens_disponiveis()
         
         try:
-            item_id = int(input(color("ID do Item: ", "verde_neon")))
+            item_id = int(input(color("\nID do Item: ", "verde_neon")))
             if 0 <= item_id < len(self.itens):
                 self.encerrar_item(self.itens[item_id])
             else:
