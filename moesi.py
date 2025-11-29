@@ -6,12 +6,3 @@ class Estado(Enum):
     EXCLUSIVE = "E" # Dado limpo igual a MP, exclusivo.
     SHARED = "S" # Dado limpo (ou cópia de um Processador), compartilhado
     INVALID = "I" # Dado inválido/vazio
-
-
-
-
-
-
-
-
-  

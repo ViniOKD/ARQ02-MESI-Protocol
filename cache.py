@@ -14,7 +14,7 @@ class Cache():
         self.id : int = id_cache
         self.barramento : Barramento = barramento
         self.tamanho : int = tamanho
-        self.linhas : deque[LinhaCache] = deque() # Não limitar o tamanho com maxlen para controlar manualmente a remoção com write-back
+        self.linhas : deque[LinhaCache] = deque()
 
     def log(self, msg: str) -> None:
         """ Função de log para o barramento """
@@ -28,7 +28,6 @@ class Cache():
         """
 
         for linha in self.linhas:
-            #print(linha)
             if linha.tag == endereco:
                 return linha
         return None
