@@ -4,6 +4,7 @@ from ram import RAM
 from colors import color
 from moesi import Estado
 import logging
+
 # Permite que o editor entenda o que é o Cache sem importar
 if TYPE_CHECKING:
     from cache import Cache

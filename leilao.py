@@ -52,7 +52,7 @@ class Comprador(Processador):
             return False
 
         # Gera Read Miss/Hit, na tentativa de ler o valor atual do item
-        valor_atual: int | None = self.ler(item.id) # TODO: VER ESSA QUESTÃO DO INT OU FLOAT
+        valor_atual: int | None = self.ler(item.id)
 
         if valor_atual is not None and valor_lance > valor_atual:
             # Se o lance for maior, realiza a escrita do novo valor

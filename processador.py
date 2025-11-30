@@ -38,7 +38,7 @@ class Processador(ABC):
         """
         self.log(f"Executando escrita no endereço {endereco} com valor {valor}")
         self.cache.escrever(endereco, valor)
-        self.log(f"Escrita concluída")
+        self.log(f"Escrita concluída. Valor: {valor}")
     
     def mostrar_cache(self) -> None:
         """Exibe o estado atual da cache do processador"""
