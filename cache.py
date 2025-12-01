@@ -38,6 +38,7 @@ class Cache():
         Se for sujo (M ou O), escreve de volta na RAM, write-back.
         """
 
+        
         if len(self.linhas) >= self.tamanho:    
             linha_removida = self.linhas.popleft() # remove a linha mais antiga
     
@@ -69,12 +70,19 @@ class Cache():
 
         dado, novo_estado = self.barramento.solicitar_leitura(endereco, self.id)
 
-        nova_linha = LinhaCache()
-        nova_linha.tag = endereco
-        nova_linha.dado = dado
-        nova_linha.estado = novo_estado
-        self.linhas.append(nova_linha)
-        return dado
+        if linha: 
+            # Atualiza a linha existente
+            linha.dado = dado
+            linha.estado = novo_estado
+            return dado
+        else:
+            # Cria uma nova linha
+            nova_linha = LinhaCache()
+            nova_linha.tag = endereco
+            nova_linha.dado = dado
+            nova_linha.estado = novo_estado
+            self.linhas.append(nova_linha)
+            return dado
     
     def escrever(self, endereco : int, valor : int) :
         """
@@ -110,12 +118,19 @@ class Cache():
         # Garantir que outras caches invalidem suas cópias
         self.barramento.solicitar_escrita(endereco, self.id)
 
-        nova_linha = LinhaCache()
-        nova_linha.tag = endereco
-        nova_linha.dado = valor
-        nova_linha.estado = Estado.MODIFIED
-        self.linhas.append(nova_linha)
-        return nova_linha
+        if linha:
+            # Atualiza a linha existente
+            linha.dado = valor
+            linha.estado = Estado.MODIFIED
+            return linha
+        else:
+            # Cria uma nova linha
+            nova_linha = LinhaCache()
+            nova_linha.tag = endereco
+            nova_linha.dado = valor
+            nova_linha.estado = Estado.MODIFIED
+            self.linhas.append(nova_linha)
+            return nova_linha
 
     def __repr__ (self):
         """
